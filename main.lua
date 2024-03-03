@@ -1,7 +1,10 @@
-local world
 local RAIO_BOLA = 10
-local FRICCAO_BOLA = 0.0
+local FRICCAO_BOLA = 0.5
+local OFFSET_MESA = 50
+local MOVIMENTO_MINIMO = 15 -- TODO: Verificar um número bom
 
+local world
+local estadoAtual
 local bolas = {}
 local tela = {
     largura = 1280,
@@ -17,16 +20,14 @@ function love.load()
         resizable = false,
         vsync = true
     })
-    world = love.physics.newWorld(0, 0, true)
+    love.graphics.setBackgroundColor(64/255, 29/255, 8/255)
 
-    adicionarBola(100, 100, {1, 0, 0}) -- ! Somente para teste
+    iniciarSimulacao()
 end
 
 function love.draw()
-    love.graphics.push()
-    
-    love.graphics.setBackgroundColor(64/255, 29/255, 8/255)
-    
+    love.graphics.push() -- TODO: Checar se realmente precisa salvar o estado
+
     -- Aplica o zoom e a rotação somente durante o desenho
     love.graphics.translate(tela.largura / 2, tela.altura / 2)
     love.graphics.rotate(tela.angulo)
@@ -38,18 +39,27 @@ function love.draw()
         desenharBola(bola)
     end
 
-    love.graphics.pop()
+    love.graphics.pop() -- TODO: Checar se realmente precise salvar o estado
 end
 
 function love.update(dt)
-    -- Atualizar a física do mundo
-    world:update(dt)
+    if estadoAtual == "rotação" then
+        -- Rotaciona o taco em relação a bola branca
 
-    -- TODO: Checar somente se tiver bolas em movimento
-    for _, bola in pairs(bolas) do
-        checarColisaoBorda(bola)
+    elseif estadoAtual == "distância" then
+        -- Distancia o taco da bola branca
+
+    elseif estadoAtual == "colisão" then
+        -- Calcula as colisões até as bolas atingirem o movimento minimo
+        -- Atualizar a física do mundo
+        world:update(dt)
+        
+        for _, bola in pairs(bolas) do
+            checarMovimentoMinimo(bola)
+            checarColisaoBorda(bola)
+        end
     end
-
+    
     -- Controle do zoom
     if love.keyboard.isDown("up") then
         tela.escala = tela.escala + 0.2 * dt
@@ -73,13 +83,25 @@ function desenharBola(bola)
 end
 
 function desenharMesa()
-    local retanguloLargura = tela.largura - 100
-    local retanguloAltura = tela.altura - 100
-    local retanguloX = -retanguloLargura / 2
-    local retanguloY = -retanguloAltura / 2
+    local mesaLargura = tela.largura - OFFSET_MESA * 2
+    local mesaAltura = tela.altura - OFFSET_MESA * 2
+
+    -- Largura e altura invertida por causa do translate que centraliza o sistema de coordenadas
+    local mesaX = -mesaLargura / 2 
+    local mesaY = -mesaAltura / 2
 
     love.graphics.setColor(0, 1, 0, 0.8)
-    love.graphics.rectangle("fill", retanguloX, retanguloY, retanguloLargura, retanguloAltura)
+    love.graphics.rectangle("fill", mesaX, mesaY, mesaLargura, mesaAltura)
+end
+
+-- * LÓGICA PRINCIPAL
+
+function iniciarSimulacao()
+    world = love.physics.newWorld(0, 0, true)
+    -- estadoAtual = "rotação"
+    estadoAtual = "colisão" -- ! Para testes apenas
+
+    adicionarTodasAsBolas()
 end
 
 -- * BOLAS
@@ -98,15 +120,25 @@ function adicionarBola(x, y, rgb)
     table.insert(bolas, bola)
 
     local velocidadeInicialX = 100 -- ! Para testes apenas
-    local velocidadeInicialY = 100 -- ! Para testes apenas
+    local velocidadeInicialY = 0 -- ! Para testes apenas
     body:setLinearVelocity(velocidadeInicialX, velocidadeInicialY)
     body:setLinearDamping(FRICCAO_BOLA)
 end
 
 function adicionarTodasAsBolas()
     -- Bola branca
-
+    local x = (tela.largura / 4)
+    local y = (tela.altura / 2)
+    adicionarBola(x, y, {1, 1, 1})
     -- Demais bolas
+end
+
+function checarMovimentoMinimo(bola)
+    -- Para as bolas que estão se lentas para agilizar a transição de estados
+    local vx, vy = bola.body:getLinearVelocity()
+    if (math.abs(vx) < MOVIMENTO_MINIMO and math.abs(vy) < MOVIMENTO_MINIMO) then
+        bola.body:setLinearVelocity(0, 0)
+    end
 end
 
 -- * COLISÕES
