@@ -1,5 +1,7 @@
+local DEBUG = true
+
 local RAIO_BOLA = 10
-local FRICCAO_BOLA = 0.5
+local FRICCAO_BOLA = 0.1
 local OFFSET_MESA = 50
 local MOVIMENTO_MINIMO = 15 -- TODO: Verificar um número bom
 
@@ -40,24 +42,36 @@ function love.draw()
     end
 
     love.graphics.pop() -- TODO: Checar se realmente precise salvar o estado
+
+    if DEBUG then
+        mostrarInformacoesDeDebug()
+    end
 end
 
 function love.update(dt)
     if estadoAtual == "rotação" then
         -- Rotaciona o taco em relação a bola branca
+        -- 1) Atualizar o ãngulo do taco em relação ao mouse
+        -- 2) Se clicar, mudar estadoAtual para "distância"
 
     elseif estadoAtual == "distância" then
         -- Distancia o taco da bola branca
+        -- 1) Atualizar a distância do taco em relação ao mouse
+        -- 2) Se clicar, calcular o poder da tacada utilizando a distância e aplicar na bola branca.
+        -- 3) Por fim, mudar estadoAtual para "colisão"
 
     elseif estadoAtual == "colisão" then
         -- Calcula as colisões até as bolas atingirem o movimento minimo
-        -- Atualizar a física do mundo
+        -- 1) Checa a colisão entre as bolas
         world:update(dt)
-        
+
+        -- 2) Checa as colisões entre 
         for _, bola in pairs(bolas) do
             checarMovimentoMinimo(bola)
             checarColisaoBorda(bola)
         end
+
+        -- 3) Se todas as bolas pararam, mudar estadoAtual para "rotação"
     end
     
     -- Controle do zoom
@@ -104,6 +118,29 @@ function iniciarSimulacao()
     adicionarTodasAsBolas()
 end
 
+function mostrarInformacoesDeDebug()
+    love.graphics.setColor(1, 1, 1)
+    love.graphics.print(
+        "Estado Atual: " .. estadoAtual .. " - FPS: " .. tostring(love.timer.getFPS()), 
+        5, 5
+    )
+
+    for i, bola in pairs(bolas) do
+        local va = string.format("%.2f", bola.body:getAngularVelocity())
+        local vx, vy = bola.body:getLinearVelocity()
+        vx = string.format("%.2f", vx)
+        vy = string.format("%.2f", vy)
+        love.graphics.setColor(bola.cor)
+        love.graphics.print(
+            "Bola " .. i ..
+            " Velocidade X: ".. vx .. 
+            " Velocidade Y: ".. vy ..
+            " Velocidade Angular: " .. va, 
+            5, i * 18
+        )
+    end
+end
+
 -- * BOLAS
 
 function adicionarBola(x, y, rgb)
@@ -120,7 +157,7 @@ function adicionarBola(x, y, rgb)
     table.insert(bolas, bola)
 
     local velocidadeInicialX = 100 -- ! Para testes apenas
-    local velocidadeInicialY = 0 -- ! Para testes apenas
+    local velocidadeInicialY = 50 -- ! Para testes apenas
     body:setLinearVelocity(velocidadeInicialX, velocidadeInicialY)
     body:setLinearDamping(FRICCAO_BOLA)
 end
