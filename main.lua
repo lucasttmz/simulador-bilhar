@@ -23,10 +23,11 @@ function love.load()
 end
 
 function love.draw()
-    love.graphics.setBackgroundColor(64/255, 29/255, 8/255)
-    -- Aplica o zoom e a rotação
     love.graphics.push()
-
+    
+    love.graphics.setBackgroundColor(64/255, 29/255, 8/255)
+    
+    -- Aplica o zoom e a rotação somente durante o desenho
     love.graphics.translate(tela.largura / 2, tela.altura / 2)
     love.graphics.rotate(tela.angulo)
     love.graphics.scale(tela.escala, tela.escala)
@@ -44,6 +45,11 @@ function love.update(dt)
     -- Atualizar a física do mundo
     world:update(dt)
 
+    -- TODO: Checar somente se tiver bolas em movimento
+    for _, bola in pairs(bolas) do
+        checarColisaoBorda(bola)
+    end
+
     -- Controle do zoom
     if love.keyboard.isDown("up") then
         tela.escala = tela.escala + 0.2 * dt
@@ -58,7 +64,7 @@ function love.update(dt)
     end
 end
 
--- ! DESENHAR
+-- * DESENHAR
 
 function desenharBola(bola)
     local x, y = bola.body:getPosition()
@@ -76,7 +82,7 @@ function desenharMesa()
     love.graphics.rectangle("fill", retanguloX, retanguloY, retanguloLargura, retanguloAltura)
 end
 
--- ! Funcionalidades
+-- * BOLAS
 
 function adicionarBola(x, y, rgb)
     local body = love.physics.newBody(world, x, y, "dynamic")
@@ -91,11 +97,34 @@ function adicionarBola(x, y, rgb)
 
     table.insert(bolas, bola)
 
-    local velocidadeInicialX = math.random(100, 150)
-    local velocidadeInicialY = math.random(100, 150)
+    local velocidadeInicialX = 100 -- ! Para testes apenas
+    local velocidadeInicialY = 100 -- ! Para testes apenas
     body:setLinearVelocity(velocidadeInicialX, velocidadeInicialY)
     body:setLinearDamping(FRICCAO_BOLA)
 end
 
 function adicionarTodasAsBolas()
+    -- Bola branca
+
+    -- Demais bolas
+end
+
+-- * COLISÕES
+function checarColisaoBorda(bola)
+    local x, y = bola.body:getPosition()
+    local velocidadeX, velocidadeY = bola.body:getLinearVelocity()
+
+    -- Colisão com bordas laterais
+    if x - bola.shape:getRadius() < 50 and velocidadeX < 0 then -- Esquerda
+        bola.body:setLinearVelocity(-velocidadeX, velocidadeY)
+    elseif x + bola.shape:getRadius() > tela.largura - 50 and velocidadeX > 0 then -- Direita
+        bola.body:setLinearVelocity(-velocidadeX, velocidadeY)
+    end
+
+    -- Colisão com bordas superiores e inferiores
+    if y - bola.shape:getRadius() < 50 and velocidadeY < 0 then -- Cima
+        bola.body:setLinearVelocity(velocidadeX, -velocidadeY)
+    elseif y + bola.shape:getRadius() > tela.altura - 50 and velocidadeY > 0 then -- Baixo
+        bola.body:setLinearVelocity(velocidadeX, -velocidadeY)
+    end
 end
