@@ -15,8 +15,7 @@ local tela = {
 local taco = {
     comprimento = 400,
     largura = 10,
-    distanciaBola = 10,
-    distanciaFixa = 175,
+    distanciaBola = 30,
     angulo = 0,
 }
 
@@ -41,6 +40,7 @@ function love.draw()
 
     if estadoAtual ~= "colisão" then
         desenharTaco()
+        desenharTragetoria()
     end
 
     if DEBUG then
@@ -50,10 +50,7 @@ end
 
 function love.update(dt)
     if estadoAtual == "rotação" then
-        -- Rotaciona o taco em relação a bola branca
-        -- 1) Atualizar o ãngulo do taco em relação ao mouse
         rotacionarTaco()
-        -- 2) Se clicar, mudar estadoAtual para "distância"
 
     elseif estadoAtual == "distância" then
         -- Distancia o taco da bola branca
@@ -76,6 +73,27 @@ function love.update(dt)
     end
 end
 
+function love.mousepressed(x, y, button, istouch)
+    if button == 1 then -- Botão esquerdo do mouse
+        if estadoAtual == "rotação" then
+            -- 1) Próximo estado
+            estadoAtual = "distância"
+
+        elseif estadoAtual == "distância" then
+            -- 1) Calcula o poder e aplica a bola em conjunto do ângulo
+
+            -- 2) Próximo estado
+            estadoAtual = "colisão"
+        end
+    end
+end
+
+function love.keypressed(key)
+    if key == "escape" and estadoAtual == "distância" then
+        estadoAtual = "rotação"
+    end
+end
+
 -- * DESENHAR
 
 function desenharBola(bola)
@@ -94,24 +112,35 @@ end
 function desenharTaco()
     love.graphics.push()
     love.graphics.translate(taco.x , taco.y)
-    love.graphics.rotate(taco.angulo + math.pi / 2)  -- para alinhar o taco corretamente
+    love.graphics.rotate(taco.angulo + math.pi / 2)  -- Para o taco apontar na bola
     love.graphics.setColor(1, 1, 1, 1)
     love.graphics.rectangle("fill", -taco.largura / 2, -taco.comprimento / 2, taco.largura, taco.comprimento)
     love.graphics.pop()
+end
+
+function desenharTragetoria()
+    local bolaX, bolaY = bolas[1].body:getPosition()
+
+    -- TODO: Encontrar uma forma de  calcular a distancia da bola até o limite da mesa
+    local comprimentoLinha = tela.largura -- ! Está saindo fora da mesa
+    local linhaX = bolaX + comprimentoLinha * -math.cos(taco.angulo)
+    local linhaY = bolaY + comprimentoLinha * -math.sin(taco.angulo)
+
+    love.graphics.setColor(1, 1, 1, 0.5)
+    love.graphics.line(bolaX, bolaY, linhaX, linhaY)
 end
 
 -- * LÓGICA PRINCIPAL
 
 function iniciarSimulacao()
     world = love.physics.newWorld(0, 0, true)
-    -- estadoAtual = "rotação"
-    estadoAtual = "colisão"
+    estadoAtual = "rotação"
 
     adicionarTodasAsBolas()
 end
 
 function mostrarInformacoesDeDebug()
-    love.graphics.setColor(1, 1, 1)
+    love.graphics.setColor(1, 1, 1, 1)
     love.graphics.print(
         "Estado Atual: " .. estadoAtual .. " - FPS: " .. tostring(love.timer.getFPS()), 
         5, 0
@@ -152,6 +181,7 @@ function adicionarBola(x, y, rgb)
     local velocidadeInicialY = math.random(100, 150)
     body:setLinearVelocity(velocidadeInicialX, velocidadeInicialY)
     body:setLinearDamping(FRICCAO_BOLA)
+    body:setAngularDamping(FRICCAO_BOLA)
 end
 
 function adicionarTodasAsBolas()
@@ -191,21 +221,19 @@ end
 
 function checarColisaoBorda(bola)
     -- TODO: Converter as paredes para um objeto do love.physics
-    -- TODO: Melhorar o if else, remover redundância
     local x, y = bola.body:getPosition()
+    local raio = bola.shape:getRadius()
     local velocidadeX, velocidadeY = bola.body:getLinearVelocity()
 
-    -- Colisão com bordas laterais
-    if x - bola.shape:getRadius() < 50 and velocidadeX < 0 then -- Esquerda
-        bola.body:setLinearVelocity(-velocidadeX, velocidadeY)
-    elseif x + bola.shape:getRadius() > tela.largura - 50 and velocidadeX > 0 then -- Direita
+    -- Colisão laterais
+    if ((x - raio < OFFSET_MESA and velocidadeX < 0) or 
+        (x + raio > tela.largura - OFFSET_MESA and velocidadeX > 0)) then
         bola.body:setLinearVelocity(-velocidadeX, velocidadeY)
     end
 
-    -- Colisão com bordas superiores e inferiores
-    if y - bola.shape:getRadius() < 50 and velocidadeY < 0 then -- Cima
-        bola.body:setLinearVelocity(velocidadeX, -velocidadeY)
-    elseif y + bola.shape:getRadius() > tela.altura - 50 and velocidadeY > 0 then -- Baixo
+    -- Colisão superior/inferior
+    if ((y - raio < OFFSET_MESA and velocidadeY < 0) or 
+        (y + raio > tela.altura - OFFSET_MESA and velocidadeY > 0)) then
         bola.body:setLinearVelocity(velocidadeX, -velocidadeY)
     end
 end
