@@ -1,9 +1,11 @@
 local DEBUG = true
 
-local RAIO_BOLA = 10
-local FRICCAO_BOLA = 0.1
 local OFFSET_MESA = 50
-local MOVIMENTO_MINIMO = 15 -- TODO: Verificar um número bom
+local RAIO_BOLA = 10
+local DESACELERACAO_BOLA = 0.3 -- TODO: Encontrar um bom número
+local ELASTICIDADE_BOLA = 0.3  -- TODO: Encontrar um bom número
+local MOVIMENTO_MINIMO = 15    -- TODO: Encontrar um bom número
+local FORCA_MAXIMA = 300       -- TODO: Encontrar um bom número
 
 local world
 local estadoAtual
@@ -15,7 +17,8 @@ local tela = {
 local taco = {
     comprimento = 400,
     largura = 10,
-    distanciaBola = 30,
+    distanciaBola = 30,  -- TODO: Renomear
+    distanciaAtual = 30, -- TODO: Mudar como funciona, atualmente salva distância em relação a metade do taco
     angulo = 0,
 }
 
@@ -41,6 +44,10 @@ function love.draw()
     if estadoAtual ~= "colisão" then
         desenharTaco()
         desenharTragetoria()
+
+        if estadoAtual == "distância" then
+            -- TODO: Informar jogador que ele pode apertar <ESC> para reajustar ângulo
+        end
     end
 
     if DEBUG then
@@ -53,10 +60,7 @@ function love.update(dt)
         rotacionarTaco()
 
     elseif estadoAtual == "distância" then
-        -- Distancia o taco da bola branca
-        -- 1) Atualizar a distância do taco em relação ao mouse
-        -- 2) Se clicar, calcular o poder da tacada utilizando a distância e aplicar na bola branca.
-        -- 3) Por fim, mudar estadoAtual para "colisão"
+        distanciarTaco()
 
     elseif estadoAtual == "colisão" then
         -- Calcula as colisões até as bolas atingirem o movimento minimo
@@ -76,13 +80,15 @@ end
 function love.mousepressed(x, y, button, istouch)
     if button == 1 then -- Botão esquerdo do mouse
         if estadoAtual == "rotação" then
-            -- 1) Próximo estado
             estadoAtual = "distância"
 
         elseif estadoAtual == "distância" then
-            -- 1) Calcula o poder e aplica a bola em conjunto do ângulo
-
-            -- 2) Próximo estado
+            local forca = math.min(
+                FORCA_MAXIMA, 
+                taco.distanciaAtual - (taco.comprimento / 2) - RAIO_BOLA
+            )
+            print(forca)
+            efetuarTacada(forca)
             estadoAtual = "colisão"
         end
     end
@@ -113,7 +119,7 @@ function desenharTaco()
     love.graphics.push()
     love.graphics.translate(taco.x , taco.y)
     love.graphics.rotate(taco.angulo + math.pi / 2)  -- Para o taco apontar na bola
-    love.graphics.setColor(1, 1, 1, 1)
+    love.graphics.setColor(140/255, 70/255, 20/255, 1)
     love.graphics.rectangle("fill", -taco.largura / 2, -taco.comprimento / 2, taco.largura, taco.comprimento)
     love.graphics.pop()
 end
@@ -146,6 +152,14 @@ function mostrarInformacoesDeDebug()
         5, 0
     )
 
+    -- TODO: A distância mostrada é a distância central, corrigir!
+
+    love.graphics.print(
+        "Taco: Ângulo Atual: " .. string.format("%.2f", taco.angulo) .. " rad " ..
+        "Distância Atual: " .. string.format("%.2f", taco.distanciaAtual),
+        5, 18
+    )
+
     for i, bola in pairs(bolas) do
         local va = string.format("%.2f", bola.body:getAngularVelocity())
         local vx, vy = bola.body:getLinearVelocity()
@@ -154,10 +168,10 @@ function mostrarInformacoesDeDebug()
         love.graphics.setColor(bola.cor)
         love.graphics.print(
             "Bola " .. i ..
-            " Velocidade X: ".. vx .. 
+            ": Velocidade X: ".. vx .. 
             " Velocidade Y: ".. vy ..
             " Velocidade Angular: " .. va, 
-            5, i * 18
+            5, (i+1) * 18
         )
     end
 end
@@ -177,11 +191,9 @@ function adicionarBola(x, y, rgb)
 
     table.insert(bolas, bola)
 
-    local velocidadeInicialX = math.random(100, 150)
-    local velocidadeInicialY = math.random(100, 150)
-    body:setLinearVelocity(velocidadeInicialX, velocidadeInicialY)
-    body:setLinearDamping(FRICCAO_BOLA)
-    body:setAngularDamping(FRICCAO_BOLA)
+    body:setLinearDamping(DESACELERACAO_BOLA)  -- Desacelaração Linear
+    body:setAngularDamping(DESACELERACAO_BOLA) -- Desacelaração Angular
+    fixture:setRestitution(ELASTICIDADE_BOLA)  -- Elasticidade
 end
 
 function adicionarTodasAsBolas()
@@ -214,7 +226,24 @@ function rotacionarTaco()
     local distanciaCentralizada = taco.distanciaBola + (taco.comprimento / 2)
     taco.x = bolaX + distanciaCentralizada * math.cos(taco.angulo)
     taco.y = bolaY + distanciaCentralizada * math.sin(taco.angulo)
+end
 
+function distanciarTaco()
+    local bolaX, bolaY = bolas[1].body:getPosition()
+    local mouseX, mouseY = love.mouse.getPosition()
+    local distancia = math.max(
+        (taco.comprimento / 2) + RAIO_BOLA, 
+        math.sqrt((mouseX - bolaX)^2 + (mouseY - bolaY)^2)
+    )
+    taco.x = bolaX + distancia * math.cos(taco.angulo)
+    taco.y = bolaY + distancia * math.sin(taco.angulo)
+    taco.distanciaAtual = distancia
+end
+
+function efetuarTacada(forca)
+    -- TODO: aplicar o ângulo a força
+    local bolaBranca = bolas[1]
+    bolaBranca.body:setLinearVelocity(forca, 0)
 end
 
 -- * COLISÕES
