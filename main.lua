@@ -11,8 +11,13 @@ local bolas = {}
 local tela = {
     largura = 1280,
     altura = 720,
+}
+local taco = {
+    comprimento = 400,
+    largura = 10,
+    distanciaBola = 10,
+    distanciaFixa = 175,
     angulo = 0,
-    escala = 1.0
 }
 
 function love.load()
@@ -28,20 +33,15 @@ function love.load()
 end
 
 function love.draw()
-    love.graphics.push() -- TODO: Checar se realmente precisa salvar o estado
-
-    -- Aplica o zoom e a rotação somente durante o desenho
-    love.graphics.translate(tela.largura / 2, tela.altura / 2)
-    love.graphics.rotate(tela.angulo)
-    love.graphics.scale(tela.escala, tela.escala)
-
     desenharMesa()
 
     for _, bola in pairs(bolas) do
         desenharBola(bola)
     end
 
-    love.graphics.pop() -- TODO: Checar se realmente precise salvar o estado
+    if estadoAtual ~= "colisão" then
+        desenharTaco()
+    end
 
     if DEBUG then
         mostrarInformacoesDeDebug()
@@ -52,6 +52,7 @@ function love.update(dt)
     if estadoAtual == "rotação" then
         -- Rotaciona o taco em relação a bola branca
         -- 1) Atualizar o ãngulo do taco em relação ao mouse
+        rotacionarTaco()
         -- 2) Se clicar, mudar estadoAtual para "distância"
 
     elseif estadoAtual == "distância" then
@@ -73,19 +74,6 @@ function love.update(dt)
 
         -- 3) Se todas as bolas pararam, mudar estadoAtual para "rotação"
     end
-    
-    -- Controle do zoom
-    if love.keyboard.isDown("up") then
-        tela.escala = tela.escala + 0.2 * dt
-    elseif love.keyboard.isDown("down") then
-        tela.escala = math.max(0.1, tela.escala - 0.2 * dt)
-    end
-    -- Controle da rotação
-    if love.keyboard.isDown("left") then
-        tela.angulo = tela.angulo - 2 * dt 
-    elseif love.keyboard.isDown("right") then
-        tela.angulo = tela.angulo + 2 * dt
-    end
 end
 
 -- * DESENHAR
@@ -93,19 +81,23 @@ end
 function desenharBola(bola)
     local x, y = bola.body:getPosition()
     love.graphics.setColor(bola.cor)
-    love.graphics.circle("fill", (-tela.largura/2) + x, (-tela.altura/2)+ y, bola.shape:getRadius())
+    love.graphics.circle("fill", x, y, bola.shape:getRadius())
 end
 
 function desenharMesa()
-    local mesaLargura = tela.largura - OFFSET_MESA * 2
-    local mesaAltura = tela.altura - OFFSET_MESA * 2
-
-    -- Largura e altura invertida por causa do translate que centraliza o sistema de coordenadas
-    local mesaX = -mesaLargura / 2 
-    local mesaY = -mesaAltura / 2
-
+    local mesaLargura = tela.largura - (OFFSET_MESA * 2)
+    local mesaAltura = tela.altura - (OFFSET_MESA * 2)
     love.graphics.setColor(0, 1, 0, 0.8)
-    love.graphics.rectangle("fill", mesaX, mesaY, mesaLargura, mesaAltura)
+    love.graphics.rectangle("fill", OFFSET_MESA, OFFSET_MESA, mesaLargura, mesaAltura)
+end
+
+function desenharTaco()
+    love.graphics.push()
+    love.graphics.translate(taco.x , taco.y)
+    love.graphics.rotate(taco.angulo + math.pi / 2)  -- para alinhar o taco corretamente
+    love.graphics.setColor(1, 1, 1, 1)
+    love.graphics.rectangle("fill", -taco.largura / 2, -taco.comprimento / 2, taco.largura, taco.comprimento)
+    love.graphics.pop()
 end
 
 -- * LÓGICA PRINCIPAL
@@ -113,7 +105,7 @@ end
 function iniciarSimulacao()
     world = love.physics.newWorld(0, 0, true)
     -- estadoAtual = "rotação"
-    estadoAtual = "colisão" -- ! Para testes apenas
+    estadoAtual = "colisão"
 
     adicionarTodasAsBolas()
 end
@@ -122,7 +114,7 @@ function mostrarInformacoesDeDebug()
     love.graphics.setColor(1, 1, 1)
     love.graphics.print(
         "Estado Atual: " .. estadoAtual .. " - FPS: " .. tostring(love.timer.getFPS()), 
-        5, 5
+        5, 0
     )
 
     for i, bola in pairs(bolas) do
@@ -156,30 +148,50 @@ function adicionarBola(x, y, rgb)
 
     table.insert(bolas, bola)
 
-    local velocidadeInicialX = 100 -- ! Para testes apenas
-    local velocidadeInicialY = 50 -- ! Para testes apenas
+    local velocidadeInicialX = math.random(100, 150)
+    local velocidadeInicialY = math.random(100, 150)
     body:setLinearVelocity(velocidadeInicialX, velocidadeInicialY)
     body:setLinearDamping(FRICCAO_BOLA)
 end
 
 function adicionarTodasAsBolas()
     -- Bola branca
-    local x = (tela.largura / 4)
-    local y = (tela.altura / 2)
+    local x = tela.largura / 4
+    local y = tela.altura / 2
     adicionarBola(x, y, {1, 1, 1})
     -- Demais bolas
+    adicionarBola(x * 3, y, {1, 0, 0})
 end
 
 function checarMovimentoMinimo(bola)
     -- Para as bolas que estão se lentas para agilizar a transição de estados
-    local vx, vy = bola.body:getLinearVelocity()
-    if (math.abs(vx) < MOVIMENTO_MINIMO and math.abs(vy) < MOVIMENTO_MINIMO) then
+    local velocidadeX, velocidadeY = bola.body:getLinearVelocity()
+    if (math.abs(velocidadeX) < MOVIMENTO_MINIMO and 
+        math.abs(velocidadeY) < MOVIMENTO_MINIMO) then
         bola.body:setLinearVelocity(0, 0)
+        bola.body:setAngularVelocity(0)
     end
 end
 
+-- * TACO
+
+function rotacionarTaco()
+    local bolaX, bolaY = bolas[1].body:getPosition()
+
+    -- Angulo formado pelo lado oposto (y) e adjacente (x)
+    taco.angulo = math.atan2(love.mouse.getY() - bolaY, love.mouse.getX() - bolaX)
+
+    local distanciaCentralizada = taco.distanciaBola + (taco.comprimento / 2)
+    taco.x = bolaX + distanciaCentralizada * math.cos(taco.angulo)
+    taco.y = bolaY + distanciaCentralizada * math.sin(taco.angulo)
+
+end
+
 -- * COLISÕES
+
 function checarColisaoBorda(bola)
+    -- TODO: Converter as paredes para um objeto do love.physics
+    -- TODO: Melhorar o if else, remover redundância
     local x, y = bola.body:getPosition()
     local velocidadeX, velocidadeY = bola.body:getLinearVelocity()
 
