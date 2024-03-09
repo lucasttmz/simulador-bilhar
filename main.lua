@@ -2,10 +2,11 @@ local DEBUG = false
 
 local TAMANHO_BURACO = 30
 local RAIO_BOLA = 10
+local ESPACO_ENTRE_BOLAS = 2
 local DESACELERACAO_BOLA = 0.4
 local ELASTICIDADE_BOLA = 0.8
 local DISTANCIA_MAXIMA = 600
-local ESPACO_ENTRE_BOLAS = 2
+local BOLA_BRANCA = 1
 
 local world
 local estadoAtual
@@ -35,6 +36,12 @@ local buracos = {
     {x = mesa.largura / 2 + mesa.x, y = mesa.y + mesa.altura + (TAMANHO_BURACO / 3)},
     {x = mesa.largura + mesa.x, y = mesa.y + mesa.altura + (TAMANHO_BURACO / 3)},
 } 
+local bordas = {
+    {x1 = mesa.x, y1 = mesa.y, x2 = mesa.x + mesa.largura, y2 = mesa.y},
+    {x1 = mesa.x + mesa.largura, y1 = mesa.y, x2=mesa.x + mesa.largura, y2 = mesa.y + mesa.altura},
+    {x1 = mesa.x + mesa.largura, y1 = mesa.y + mesa.altura, x2 = mesa.x, y2 = mesa.y + mesa.altura},
+    {x1 = mesa.x, y1 = mesa.y + mesa.altura, x2 = mesa.x, y2 = mesa.y}
+}
 
 function love.load()
     love.window.setTitle("Simulador Sinuca")
@@ -55,17 +62,16 @@ function love.draw()
         desenharBola(bola)
     end
 
-    if estadoAtual ~= "colisão" then
+    if estadoAtual == "rotação" or estadoAtual == "distância" then
         desenharTaco()
         desenharTragetoria()
 
         if estadoAtual == "distância" then
-            love.graphics.setColor(0, 0, 0)
-            love.graphics.printf(
-                "Aperte <ESC> se quiser reescolher a rotação", 
-                0, tela.altura / 2, tela.largura, "center"
-            )
+            mostrarMensagem("Aperte <ESC> se quiser reescolher a rotação")
         end
+
+    elseif estadoAtual == "reposição" then
+        mostrarMensagem("Escolha a posição da bola branca")
     end
 
     if DEBUG then
@@ -84,12 +90,6 @@ function love.update(dt)
         -- Checa todas as colisões
         world:update(dt)
 
-        -- 2) Checa as colisões entre 
-        for _, bola in pairs(bolas) do
-            checarColisaoBorda(bola)
-        end
-
-        -- 3) Se todas as bolas pararam, mudar estadoAtual para "rotação"
         if not bolasEmMovimento() then
             estadoAtual = "rotação"
         end
@@ -149,7 +149,7 @@ function desenharTaco()
 end
 
 function desenharTragetoria()
-    local bolaX, bolaY = bolas[1].body:getPosition()
+    local bolaX, bolaY = bolas[BOLA_BRANCA].body:getPosition()
     local comprimentoLinha = tela.largura
     local linhaX = bolaX + comprimentoLinha * -math.cos(taco.angulo)
     local linhaY = bolaY + comprimentoLinha * -math.sin(taco.angulo)
@@ -165,18 +165,21 @@ function iniciarSimulacao()
     world:setCallbacks( checarEncapamento )
     estadoAtual = "rotação"
 
+    adicionarBordas()
     adicionarTodasAsBolas()
     adicionarBuracos()
 end
 
 function checarEncapamento(a, b)
-    if b:getUserData() == nil then
-        local numBola = a:getUserData()
-        if numBola == 1 then -- Bola branca
+    local numBola = a:getUserData()
+    local colidiuCom = b:getUserData()
+
+    if colidiuCom == "buraco" then
+        if numBola == BOLA_BRANCA then
             estadoAtual = "reposição"
         else
             for i, bola in pairs(bolas) do
-                if bola.fixture:getUserData() == a:getUserData() then
+                if bola.fixture:getUserData() == numBola then
                     bolas[i].body:destroy()
                     table.remove(bolas, i)
                 end
@@ -185,14 +188,17 @@ function checarEncapamento(a, b)
     end
 end
 
+function mostrarMensagem(mensagem)
+    love.graphics.setColor(0, 0, 0)
+    love.graphics.printf(mensagem, 0, tela.altura / 2, tela.largura, "center")
+end
+
 function mostrarInformacoesDeDebug()
     love.graphics.setColor(1, 1, 1, 1)
     love.graphics.print(
         "Estado Atual: " .. estadoAtual .. " - FPS: " .. tostring(love.timer.getFPS()), 
         5, 0
     )
-
-    -- TODO: A distância mostrada é a distância central, corrigir!
 
     love.graphics.print(
         "Taco: Ângulo Atual: " .. string.format("%.2f", taco.angulo) .. " rad " ..
@@ -216,11 +222,23 @@ function mostrarInformacoesDeDebug()
     end
 end
 
+-- * MESA
+
+function adicionarBordas()
+    for _, borda in pairs(bordas) do
+        local body = love.physics.newBody(world, borda.x, borda.y, "static")
+        local shape = love.physics.newEdgeShape(borda.x1, borda.y1, borda.x2, borda.y2)
+        love.physics.newFixture(body, shape, 1)
+    end
+end
+
 function adicionarBuracos()
     for _, buraco in pairs(buracos) do
         local body = love.physics.newBody(world, buraco.x, buraco.y, "static")
         local shape = love.physics.newCircleShape(TAMANHO_BURACO)
-        fixture = love.physics.newFixture(body, shape, 1)
+        local fixture = love.physics.newFixture(body, shape, 1)
+
+        fixture:setUserData("buraco") 
     end
 end
 
@@ -280,13 +298,13 @@ end
 
 function realocarBolaBranca()
     local mouseX, mouseY = love.mouse.getPosition()
-    bolas[1].body:setPosition(mouseX, mouseY)
+    bolas[BOLA_BRANCA].body:setPosition(mouseX, mouseY)
 end
 
 -- * TACO
 
 function rotacionarTaco()
-    local bolaX, bolaY = bolas[1].body:getPosition()
+    local bolaX, bolaY = bolas[BOLA_BRANCA].body:getPosition()
 
     -- Angulo formado pelo lado oposto (y) e adjacente (x)
     taco.angulo = math.atan2(love.mouse.getY() - bolaY, love.mouse.getX() - bolaX)
@@ -297,7 +315,7 @@ function rotacionarTaco()
 end
 
 function distanciarTaco()
-    local bolaX, bolaY = bolas[1].body:getPosition()
+    local bolaX, bolaY = bolas[BOLA_BRANCA].body:getPosition()
     local mouseX, mouseY = love.mouse.getPosition()
     local distancia = math.max(
         (taco.comprimento / 2) + RAIO_BOLA, 
@@ -313,30 +331,8 @@ function efetuarTacada()
         DISTANCIA_MAXIMA, 
         (taco.distanciaDoCentro - (taco.comprimento / 2) - RAIO_BOLA) * 3
     )
-    local bolaBranca = bolas[1]
-    bolaBranca.body:setLinearVelocity(
+    bolas[BOLA_BRANCA].body:setLinearVelocity(
         forca * -math.cos(taco.angulo),
         forca * -math.sin(taco.angulo)
     )
-end
-
--- * COLISÕES
-
-function checarColisaoBorda(bola)
-    -- TODO: Converter as paredes para um objeto do love.physics
-    local x, y = bola.body:getPosition()
-    local raio = bola.shape:getRadius()
-    local velocidadeX, velocidadeY = bola.body:getLinearVelocity()
-
-   -- Colisão laterais
-   if ((x - raio < mesa.x and velocidadeX < 0) or 
-       (x + raio > tela.largura - mesa.x and velocidadeX > 0)) then
-        bola.body:setLinearVelocity(-velocidadeX * 0.9, velocidadeY * 0.9)
-    end
-
-    -- Colisão superior/inferior
-    if ((y - raio < mesa.y and velocidadeY < 0) or 
-        (y + raio > tela.altura - mesa.y and velocidadeY > 0)) then
-        bola.body:setLinearVelocity(velocidadeX * 0.9, -velocidadeY * 0.9)
-    end
 end
