@@ -1,5 +1,0 @@
-bolas = {}
-
-return {
-    bolas = bolas
-}
