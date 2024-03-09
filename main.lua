@@ -17,10 +17,16 @@ local tela = {
 local taco = {
     comprimento = 400,
     largura = 10,
-    distanciaBola = 30,  -- TODO: Renomear
-    distanciaAtual = 30, -- TODO: Mudar como funciona, atualmente salva distância em relação a metade do taco
+    distanciaDuranteRotacao = 30,
+    distanciaDoCentro = 30,
     angulo = 0,
 }
+local mesa = {
+    x = 50,
+    y = 50,
+    largura = tela.largura - 100,
+    altura = tela.altura - 100,
+}    
 
 function love.load()
     love.window.setTitle("Simulador Sinuca")
@@ -85,9 +91,8 @@ function love.mousepressed(x, y, button, istouch)
         elseif estadoAtual == "distância" then
             local forca = math.min(
                 FORCA_MAXIMA, 
-                taco.distanciaAtual - (taco.comprimento / 2) - RAIO_BOLA
+                taco.distanciaDoCentro - (taco.comprimento / 2) - RAIO_BOLA
             )
-            print(forca)
             efetuarTacada(forca)
             estadoAtual = "colisão"
         end
@@ -109,10 +114,8 @@ function desenharBola(bola)
 end
 
 function desenharMesa()
-    local mesaLargura = tela.largura - (OFFSET_MESA * 2)
-    local mesaAltura = tela.altura - (OFFSET_MESA * 2)
     love.graphics.setColor(0, 1, 0, 0.8)
-    love.graphics.rectangle("fill", OFFSET_MESA, OFFSET_MESA, mesaLargura, mesaAltura)
+    love.graphics.rectangle("fill", mesa.x, mesa.y, mesa.largura, mesa.altura)
 end
 
 function desenharTaco()
@@ -156,7 +159,7 @@ function mostrarInformacoesDeDebug()
 
     love.graphics.print(
         "Taco: Ângulo Atual: " .. string.format("%.2f", taco.angulo) .. " rad " ..
-        "Distância Atual: " .. string.format("%.2f", taco.distanciaAtual),
+        "Distância Atual: " .. string.format("%.2f", taco.distanciaDoCentro),
         5, 18
     )
 
@@ -223,7 +226,7 @@ function rotacionarTaco()
     -- Angulo formado pelo lado oposto (y) e adjacente (x)
     taco.angulo = math.atan2(love.mouse.getY() - bolaY, love.mouse.getX() - bolaX)
 
-    local distanciaCentralizada = taco.distanciaBola + (taco.comprimento / 2)
+    local distanciaCentralizada = taco.distanciaDuranteRotacao + (taco.comprimento / 2)
     taco.x = bolaX + distanciaCentralizada * math.cos(taco.angulo)
     taco.y = bolaY + distanciaCentralizada * math.sin(taco.angulo)
 end
@@ -237,7 +240,7 @@ function distanciarTaco()
     )
     taco.x = bolaX + distancia * math.cos(taco.angulo)
     taco.y = bolaY + distancia * math.sin(taco.angulo)
-    taco.distanciaAtual = distancia
+    taco.distanciaDoCentro = distancia
 end
 
 function efetuarTacada(forca)
@@ -250,19 +253,20 @@ end
 
 function checarColisaoBorda(bola)
     -- TODO: Converter as paredes para um objeto do love.physics
+    -- TODO: Reduzir um pouco a velocidade da bola depois da colisão
     local x, y = bola.body:getPosition()
     local raio = bola.shape:getRadius()
     local velocidadeX, velocidadeY = bola.body:getLinearVelocity()
 
-    -- Colisão laterais
-    if ((x - raio < OFFSET_MESA and velocidadeX < 0) or 
-        (x + raio > tela.largura - OFFSET_MESA and velocidadeX > 0)) then
+   -- Colisão laterais
+   if ((x - raio < mesa.x and velocidadeX < 0) or 
+       (x + raio > tela.largura - mesa.x and velocidadeX > 0)) then
         bola.body:setLinearVelocity(-velocidadeX, velocidadeY)
     end
 
     -- Colisão superior/inferior
-    if ((y - raio < OFFSET_MESA and velocidadeY < 0) or 
-        (y + raio > tela.altura - OFFSET_MESA and velocidadeY > 0)) then
+    if ((y - raio < mesa.y and velocidadeY < 0) or 
+        (y + raio > tela.altura - mesa.y and velocidadeY > 0)) then
         bola.body:setLinearVelocity(velocidadeX, -velocidadeY)
     end
 end
