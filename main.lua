@@ -88,8 +88,7 @@ function love.update(dt)
         distanciarTaco()
 
     elseif estadoAtual == "colisão" then
-        -- Checa todas as colisões
-        world:update(dt)
+        world:update(dt) -- Checa todas as colisões
 
         if not bolasEmMovimento() then
             estadoAtual = "rotação"
@@ -128,13 +127,17 @@ function desenharBola(bola)
     local x, y = bola.body:getPosition()
     local numBola = bola.fixture:getUserData()
     local raio = bola.shape:getRadius()
+
+    -- Circulo Exterior
     love.graphics.setColor(bola.cor)
     love.graphics.circle("fill", x, y, raio)
 
+    -- Circulo Interior
     love.graphics.setColor(numBola < 10 and {1, 1, 1} or {0, 0, 0})
     love.graphics.circle("fill", x, y, raio - 6)
     love.graphics.setColor(0, 0, 0)
 
+    -- Número da Bola
     x = x - 4
     y = y - 8
     if numBola - 1 >= 10 then
@@ -168,15 +171,24 @@ function desenharMesa()
 end
 
 function desenharTaco()
+    -- Utiliza o ângulo do taco para rotacionar em volta de taco.x e taco.y, coordenadas
+    -- atualizadas em rotacionarTaco(). 
     love.graphics.push()
     love.graphics.translate(taco.x , taco.y)
     love.graphics.rotate(taco.angulo + math.pi / 2)  -- Para o taco apontar na bola
+
+    -- Taco
     love.graphics.setColor(140/255, 70/255, 20/255, 1)
     love.graphics.rectangle("fill", -taco.largura / 2, -taco.comprimento / 2, taco.largura, taco.comprimento)
+
+    -- Ponta
+    love.graphics.setColor(100/255, 60/255, 20/255, 1)
+    love.graphics.rectangle("fill", -taco.largura / 2, (taco.comprimento / 2) - 30, taco.largura, 30)
     love.graphics.pop()
 end
 
 function desenharTragetoria()
+    -- Utiliza o ângulo contrário ao taco para desenhar a tragetória da bola
     local bolaX, bolaY = bolas[BOLA_BRANCA].body:getPosition()
     local comprimentoLinha = tela.largura
     local linhaX = bolaX + comprimentoLinha * -math.cos(taco.angulo)
@@ -189,10 +201,12 @@ end
 -- * LÓGICA PRINCIPAL
 
 function iniciarSimulacao()
+    -- Inicia o sistema de colisões do LOVE2D
     world = love.physics.newWorld(0, 0, true)
     world:setCallbacks( checarEncapamento )
     estadoAtual = "rotação"
 
+    -- Adiciona os objetos para responderem as colisões
     adicionarBordas()
     adicionarTodasAsBolas()
     adicionarBuracos()
@@ -206,6 +220,7 @@ function checarEncapamento(a, b)
         if bola == BOLA_BRANCA then
             estadoAtual = "reposição"
         else
+            -- Remove a bola da lista de bolas e a remove do mundo de colisões
             for i, bola_ in pairs(bolas) do
                 if bola_.fixture:getUserData() == bola then
                     bolas[i].body:destroy()
@@ -217,6 +232,7 @@ function checarEncapamento(a, b)
 end
 
 function mostrarMensagem(mensagem)
+    -- Centraliza mensagem com sombra
     love.graphics.setColor(0, 0, 0)
     love.graphics.printf(mensagem, 2, (tela.altura / 2)+2, tela.largura, "center")
     love.graphics.setColor(1, 1, 1)
@@ -255,6 +271,7 @@ end
 -- * MESA
 
 function adicionarBordas()
+    -- Adiciona a física das bordas
     for _, borda in pairs(bordas) do
         local body = love.physics.newBody(world, borda.x, borda.y, "static")
         local shape = love.physics.newEdgeShape(borda.x1, borda.y1, borda.x2, borda.y2)
@@ -263,6 +280,7 @@ function adicionarBordas()
 end
 
 function adicionarBuracos()
+    -- Adiciona a física dos buracos
     for _, buraco in pairs(buracos) do
         local body = love.physics.newBody(world, buraco.x, buraco.y, "static")
         local shape = love.physics.newCircleShape(RAIO_BURACO)
@@ -275,6 +293,7 @@ end
 -- * BOLAS
 
 function adicionarBola(x, y, rgb)
+    -- Adiciona a bola e sua física
     local body = love.physics.newBody(world, x, y, "dynamic")
     local shape = love.physics.newCircleShape(RAIO_BOLA)
     local fixture = love.physics.newFixture(body, shape, 1)
@@ -304,6 +323,7 @@ function adicionarTodasAsBolas()
     local baseX = x * 3
     local baseY = y
     local cores = {
+        {0, 0, 0},
         {1, 1, 0}, 
         {0, 0, 1}, 
         {1, 0, 0}, 
@@ -311,15 +331,13 @@ function adicionarTodasAsBolas()
         {1, 0.6, 0}, 
         {0, 0.4, 0.2},
         {0.3, 0.2, 0}, 
-        {0, 0, 0}
     }
 
     for i=1,5 do
         x = baseX + ((i-1) * (RAIO_BOLA * 2) + ESPACO_ENTRE_BOLAS)
         y = baseY + ((i-1) * RAIO_BOLA + ESPACO_ENTRE_BOLAS)
         for j=1,i do
-            local cor = #bolas <= 8 and cores[#bolas] or cores[(#bolas % 8)]
-            adicionarBola(x, y, cor)
+            adicionarBola(x, y, cores[(#bolas % 8) + 1])
             y = y - (RAIO_BOLA * 2) - ESPACO_ENTRE_BOLAS
         end
     end
@@ -328,6 +346,7 @@ end
 function bolasEmMovimento()
     for _, bola in pairs(bolas) do
         local velocidadeX, velocidadeY = bola.body:getLinearVelocity()
+        -- Se uma das bolas estiver em movimento, não checa as demais
         if velocidadeX ~= 0 or velocidadeY ~= 0 then
             return true
         end
@@ -349,6 +368,7 @@ function rotacionarTaco()
     -- Angulo formado pelo lado oposto (y) e adjacente (x)
     taco.angulo = math.atan2(love.mouse.getY() - bolaY, love.mouse.getX() - bolaX)
 
+    -- Centraliza o taco na metade do comprimento
     local distanciaCentralizada = taco.distanciaDuranteRotacao + (taco.comprimento / 2)
     taco.x = bolaX + distanciaCentralizada * math.cos(taco.angulo)
     taco.y = bolaY + distanciaCentralizada * math.sin(taco.angulo)
@@ -357,6 +377,8 @@ end
 function distanciarTaco()
     local bolaX, bolaY = bolas[BOLA_BRANCA].body:getPosition()
     local mouseX, mouseY = love.mouse.getPosition()
+
+    -- Limita a distância entre o contato com a bola e a distância máxima
     local distancia = math.min(
         math.max(
             (taco.comprimento / 2) + RAIO_BOLA, 
@@ -370,13 +392,12 @@ function distanciarTaco()
 end
 
 function efetuarTacada()
-    local forca = math.min(
-        DISTANCIA_MAXIMA, 
-        (taco.distanciaDoCentro - (taco.comprimento / 2) - RAIO_BOLA)
-    ) * MODIFICADOR_VELOCIDADE
+    -- Utiliza a distância calculada subtraida do centro do taco (mouse sempre fica 
+    -- centralizado no taco).
+    local forca = (taco.distanciaDoCentro - (taco.comprimento / 2) - RAIO_BOLA) * MODIFICADOR_VELOCIDADE
 
     bolas[BOLA_BRANCA].body:setLinearVelocity(
-        forca * -math.cos(taco.angulo),
-        forca * -math.sin(taco.angulo)
+        forca * -math.cos(taco.angulo), -- Velocidade eixo x
+        forca * -math.sin(taco.angulo)  -- Velocidade eixo y
     )
 end
