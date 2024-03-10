@@ -1,15 +1,17 @@
 local DEBUG = false
 
-local TAMANHO_BURACO = 30
-local RAIO_BOLA = 10
+local RAIO_BURACO = 30
+local RAIO_BOLA = 15
 local ESPACO_ENTRE_BOLAS = 2
 local DESACELERACAO_BOLA = 0.4
 local ELASTICIDADE_BOLA = 0.8
-local DISTANCIA_MAXIMA = 600
+local DISTANCIA_MAXIMA = 400
+local MODIFICADOR_VELOCIDADE = 4
 local BOLA_BRANCA = 1
 
 local world
 local estadoAtual
+local reposicionarBolaBranca = false
 local bolas = {}
 local tela = {
     largura = 1280,
@@ -29,12 +31,12 @@ local mesa = {
     altura = tela.altura - 120,
 }    
 local buracos = {
-    {x = mesa.x , y = mesa.y - (TAMANHO_BURACO / 3)},
-    {x = mesa.largura / 2 + mesa.x, y = mesa.y - (TAMANHO_BURACO / 3)},
-    {x = mesa.largura + mesa.x, y = mesa.y - (TAMANHO_BURACO / 3)},
-    {x = mesa.x, y = mesa.y + mesa.altura + (TAMANHO_BURACO / 3)},
-    {x = mesa.largura / 2 + mesa.x, y = mesa.y + mesa.altura + (TAMANHO_BURACO / 3)},
-    {x = mesa.largura + mesa.x, y = mesa.y + mesa.altura + (TAMANHO_BURACO / 3)},
+    {x = mesa.x , y = mesa.y - (RAIO_BURACO / 3)},
+    {x = mesa.largura / 2 + mesa.x, y = mesa.y - (RAIO_BURACO / 3)},
+    {x = mesa.largura + mesa.x, y = mesa.y - (RAIO_BURACO / 3)},
+    {x = mesa.x, y = mesa.y + mesa.altura + (RAIO_BURACO / 3)},
+    {x = mesa.largura / 2 + mesa.x, y = mesa.y + mesa.altura + (RAIO_BURACO / 3)},
+    {x = mesa.largura + mesa.x, y = mesa.y + mesa.altura + (RAIO_BURACO / 3)},
 } 
 local bordas = {
     {x1 = mesa.x, y1 = mesa.y, x2 = mesa.x + mesa.largura, y2 = mesa.y},
@@ -50,7 +52,6 @@ function love.load()
         resizable = false,
         vsync = true
     })
-    love.graphics.setBackgroundColor(64/255, 29/255, 8/255)
 
     iniciarSimulacao()
 end
@@ -67,7 +68,7 @@ function love.draw()
         desenharTragetoria()
 
         if estadoAtual == "distância" then
-            mostrarMensagem("Aperte <ESC> se quiser reescolher a rotação")
+            mostrarMensagem("Aperte <ESC> se quiser escolher a rotação novamente")
         end
 
     elseif estadoAtual == "reposição" then
@@ -100,7 +101,7 @@ function love.update(dt)
 
 end
 
-function love.mousepressed(x, y, button, istouch)
+function love.mousepressed(x, y, button)
     if button == 1 then -- Botão esquerdo do mouse
         if estadoAtual == "rotação" then
             estadoAtual = "distância"
@@ -125,17 +126,44 @@ end
 
 function desenharBola(bola)
     local x, y = bola.body:getPosition()
+    local numBola = bola.fixture:getUserData()
+    local raio = bola.shape:getRadius()
     love.graphics.setColor(bola.cor)
-    love.graphics.circle("fill", x, y, bola.shape:getRadius())
+    love.graphics.circle("fill", x, y, raio)
+
+    love.graphics.setColor(numBola < 10 and {1, 1, 1} or {0, 0, 0})
+    love.graphics.circle("fill", x, y, raio - 6)
+    love.graphics.setColor(0, 0, 0)
+
+    x = x - 4
+    y = y - 8
+    if numBola - 1 >= 10 then
+        x = x - 4 -- Espaçamento duplo para os dois dígitos
+    end
+    if numBola ~= BOLA_BRANCA then
+        love.graphics.setColor(numBola < 10 and {0, 0, 0} or {1, 1, 1})
+        love.graphics.print(numBola - 1, x, y)
+    end
 end
 
 function desenharMesa()
+    -- Bordas
+    love.graphics.setColor(64/255, 29/255, 8/255)
+    love.graphics.rectangle("fill", 
+        mesa.x - (RAIO_BURACO * 2), 
+        mesa.y - (RAIO_BURACO * 2), 
+        mesa.largura + (RAIO_BURACO * 4), 
+        mesa.altura + (RAIO_BURACO * 4)
+    )
+
+    -- Tecido
     love.graphics.setColor(0, 1, 0, 0.8)
     love.graphics.rectangle("fill", mesa.x, mesa.y, mesa.largura, mesa.altura)
 
+    -- Buracos
     love.graphics.setColor(0,0,0)
     for _, buraco in pairs(buracos) do
-        love.graphics.circle("fill", buraco.x, buraco.y, TAMANHO_BURACO)
+        love.graphics.circle("fill", buraco.x, buraco.y, RAIO_BURACO)
     end
 end
 
@@ -171,15 +199,15 @@ function iniciarSimulacao()
 end
 
 function checarEncapamento(a, b)
-    local numBola = a:getUserData()
+    local bola = a:getUserData()
     local colidiuCom = b:getUserData()
 
     if colidiuCom == "buraco" then
-        if numBola == BOLA_BRANCA then
+        if bola == BOLA_BRANCA then
             estadoAtual = "reposição"
         else
-            for i, bola in pairs(bolas) do
-                if bola.fixture:getUserData() == numBola then
+            for i, bola_ in pairs(bolas) do
+                if bola_.fixture:getUserData() == bola then
                     bolas[i].body:destroy()
                     table.remove(bolas, i)
                 end
@@ -190,6 +218,8 @@ end
 
 function mostrarMensagem(mensagem)
     love.graphics.setColor(0, 0, 0)
+    love.graphics.printf(mensagem, 2, (tela.altura / 2)+2, tela.largura, "center")
+    love.graphics.setColor(1, 1, 1)
     love.graphics.printf(mensagem, 0, tela.altura / 2, tela.largura, "center")
 end
 
@@ -235,7 +265,7 @@ end
 function adicionarBuracos()
     for _, buraco in pairs(buracos) do
         local body = love.physics.newBody(world, buraco.x, buraco.y, "static")
-        local shape = love.physics.newCircleShape(TAMANHO_BURACO)
+        local shape = love.physics.newCircleShape(RAIO_BURACO)
         local fixture = love.physics.newFixture(body, shape, 1)
 
         fixture:setUserData("buraco") 
@@ -273,13 +303,23 @@ function adicionarTodasAsBolas()
     -- Demais bolas
     local baseX = x * 3
     local baseY = y
-    local cores = {{1, 1, 0}, {1, 0, 0}}
+    local cores = {
+        {1, 1, 0}, 
+        {0, 0, 1}, 
+        {1, 0, 0}, 
+        {0.6, 0, 0.6}, 
+        {1, 0.6, 0}, 
+        {0, 0.4, 0.2},
+        {0.3, 0.2, 0}, 
+        {0, 0, 0}
+    }
 
     for i=1,5 do
         x = baseX + ((i-1) * (RAIO_BOLA * 2) + ESPACO_ENTRE_BOLAS)
         y = baseY + ((i-1) * RAIO_BOLA + ESPACO_ENTRE_BOLAS)
         for j=1,i do
-            adicionarBola(x, y, cores[(#bolas % 2) + 1])
+            local cor = #bolas <= 8 and cores[#bolas] or cores[(#bolas % 8)]
+            adicionarBola(x, y, cor)
             y = y - (RAIO_BOLA * 2) - ESPACO_ENTRE_BOLAS
         end
     end
@@ -317,9 +357,12 @@ end
 function distanciarTaco()
     local bolaX, bolaY = bolas[BOLA_BRANCA].body:getPosition()
     local mouseX, mouseY = love.mouse.getPosition()
-    local distancia = math.max(
-        (taco.comprimento / 2) + RAIO_BOLA, 
-        math.sqrt((mouseX - bolaX)^2 + (mouseY - bolaY)^2)
+    local distancia = math.min(
+        math.max(
+            (taco.comprimento / 2) + RAIO_BOLA, 
+            math.sqrt((mouseX - bolaX)^2 + (mouseY - bolaY)^2)
+        ),
+        DISTANCIA_MAXIMA
     )
     taco.x = bolaX + distancia * math.cos(taco.angulo)
     taco.y = bolaY + distancia * math.sin(taco.angulo)
@@ -329,8 +372,9 @@ end
 function efetuarTacada()
     local forca = math.min(
         DISTANCIA_MAXIMA, 
-        (taco.distanciaDoCentro - (taco.comprimento / 2) - RAIO_BOLA) * 3
-    )
+        (taco.distanciaDoCentro - (taco.comprimento / 2) - RAIO_BOLA)
+    ) * MODIFICADOR_VELOCIDADE
+
     bolas[BOLA_BRANCA].body:setLinearVelocity(
         forca * -math.cos(taco.angulo),
         forca * -math.sin(taco.angulo)
