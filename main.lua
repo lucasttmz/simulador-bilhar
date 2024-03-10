@@ -131,9 +131,14 @@ function desenharBola(bola)
     love.graphics.setColor(bola.cor)
     love.graphics.circle("fill", x, y, raio)
 
+    -- Contorno
+    love.graphics.setLineWidth(1)
+    love.graphics.setColor(0, 0, 0)
+    love.graphics.circle("line", x, y, raio)
+
     -- Circulo Interior
     love.graphics.setColor(numBola < 10 and {1, 1, 1} or {0, 0, 0})
-    love.graphics.circle("fill", x, y, raio - 6)
+    love.graphics.circle("fill", x, y, raio - 5)
     love.graphics.setColor(0, 0, 0)
 
     -- Número da Bola
@@ -166,7 +171,7 @@ function desenharMesa()
     love.graphics.rectangle("fill", 100, 40, mesa.largura + 40, mesa.altura + 40)
    
     -- Protetor da borda
-    love.graphics.setColor(1, 1, 1, 0.8)
+    love.graphics.setColor(1, 1, 1, 0.4)
     love.graphics.setLineWidth(3)
     for _, linha in pairs(bordas) do
         love.graphics.line(linha.x1, linha.y1, linha.x2, linha.y2)
@@ -201,22 +206,38 @@ function desenharTaco()
     -- Taco
     love.graphics.setColor(140/255, 70/255, 20/255, 1)
     love.graphics.rectangle("fill", -taco.largura / 2, -taco.comprimento / 2, taco.largura, taco.comprimento)
+    love.graphics.setColor(0, 0, 0)
+    love.graphics.setLineWidth(1)
+    love.graphics.rectangle("line", -taco.largura / 2, -taco.comprimento / 2, taco.largura, taco.comprimento)
 
     -- Ponta
     love.graphics.setColor(100/255, 60/255, 20/255, 1)
     love.graphics.rectangle("fill", -taco.largura / 2, (taco.comprimento / 2) - 30, taco.largura, 30)
+    love.graphics.setColor(0, 0, 0)
+    love.graphics.rectangle("line", -taco.largura / 2, (taco.comprimento / 2) - 30, taco.largura, 30)
     love.graphics.pop()
 end
 
 function desenharTragetoria()
     -- Utiliza o ângulo contrário ao taco para desenhar a tragetória da bola
     local bolaX, bolaY = bolas[BOLA_BRANCA].body:getPosition()
-    local comprimentoLinha = tela.largura
-    local linhaX = bolaX + comprimentoLinha * -math.cos(taco.angulo)
-    local linhaY = bolaY + comprimentoLinha * -math.sin(taco.angulo)
+    local intervaloPontos = 5
+    
+    love.graphics.setColor(1, 1, 1)
+    love.graphics.setPointSize(3)
+    for i=5, mesa.largura, 5 do
+        local pontoX = bolaX + (intervaloPontos * i) * -math.cos(taco.angulo)
+        local pontoY = bolaY + (intervaloPontos * i) * -math.sin(taco.angulo)
 
-    love.graphics.setColor(1, 1, 1, 0.5)
-    love.graphics.line(bolaX, bolaY, linhaX, linhaY)
+        -- Para de desenhar os pontos se eles sairem da mesa
+        if (pontoX > mesa.x + mesa.largura) or (pontoX < mesa.x) or
+           (pontoY > mesa.y + mesa.altura) or (pontoY < mesa.y) then
+            break
+        end
+
+        love.graphics.points(pontoX, pontoY)
+        love.graphics.setPointSize(love.graphics.getPointSize() * 0.95)
+    end
 end
 
 -- * LÓGICA PRINCIPAL
