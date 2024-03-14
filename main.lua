@@ -414,7 +414,24 @@ function bolasEmMovimento()
 end
 
 function realocarBolaBranca()
+    -- Limites da mesa
+    local LIMITE_ESQUERDA = mesa.x + RAIO_BOLA
+    local LIMITE_DIREITA = mesa.x + mesa.largura - RAIO_BOLA
+    local LIMITE_CIMA = mesa.y + RAIO_BOLA
+    local LIMITE_BAIXO = mesa.y + mesa.altura - RAIO_BOLA
     local mouseX, mouseY = love.mouse.getPosition()
+    
+    -- Só deixa realocar a bola dentro da mesa
+    if mouseX < LIMITE_ESQUERDA then
+        mouseX = LIMITE_ESQUERDA
+    elseif mouseX > LIMITE_DIREITA then
+        mouseX = LIMITE_DIREITA
+    end
+    if mouseY < LIMITE_CIMA then
+        mouseY = LIMITE_CIMA
+    elseif mouseY > LIMITE_BAIXO then
+        mouseY = LIMITE_BAIXO
+    end
     bolas[BOLA_BRANCA].body:setPosition(mouseX, mouseY)
 end
 
