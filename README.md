@@ -1,6 +1,6 @@
-# Simulador de Sinuca 2D
+# Simulador de Bilhar 2D
 
-Simulador de sinuca utilizando o framework LOVE2D.
+Simulador de bilhar utilizando o framework LOVE2D.
 
 *Aplicação feita como um trabalho na disciplina de computação gráfica.*
 

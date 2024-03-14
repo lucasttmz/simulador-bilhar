@@ -46,7 +46,7 @@ local bordas = {
 }
 
 function love.load()
-    love.window.setTitle("Simulador Sinuca")
+    love.window.setTitle("Simulador Bilhar")
     love.window.setMode(tela.largura, tela.altura, {
         fullscreen = false,
         resizable = false,
@@ -137,18 +137,26 @@ function desenharBola(bola)
     love.graphics.circle("line", x, y, raio)
 
     -- Circulo Interior
-    love.graphics.setColor(numBola < 10 and {1, 1, 1} or {0, 0, 0})
-    love.graphics.circle("fill", x, y, raio - 5)
+    love.graphics.setColor(1, 1, 1)
+    love.graphics.circle("fill", x, y, raio - 6)
     love.graphics.setColor(0, 0, 0)
 
-    -- Número da Bola
+    -- Listras
+    if numBola >= 10 then
+        love.graphics.setColor(1, 1, 1)
+        love.graphics.arc( "fill", x, y+3, RAIO_BOLA-4, 0.5, math.pi-0.5)
+        love.graphics.arc( "fill", x, y-3, RAIO_BOLA-4, -0.5, -math.pi+0.5)
+    end
+
+    -- Número da bola
     x = x - 4
     y = y - 8
     if numBola - 1 >= 10 then
         x = x - 4 -- Espaçamento duplo para os dois dígitos
     end
+
     if numBola ~= BOLA_BRANCA then
-        love.graphics.setColor(numBola < 10 and {0, 0, 0} or {1, 1, 1})
+        love.graphics.setColor(0, 0, 0)
         love.graphics.print(numBola - 1, x, y)
     end
 end
@@ -334,7 +342,7 @@ end
 
 -- * BOLAS
 
-function adicionarBola(x, y, rgb)
+function adicionarBola(x, y, rgb, num)
     -- Adiciona a bola e sua física
     local body = love.physics.newBody(world, x, y, "dynamic")
     local shape = love.physics.newCircleShape(RAIO_BOLA)
@@ -352,35 +360,43 @@ function adicionarBola(x, y, rgb)
     body:setLinearDamping(DESACELERACAO_BOLA)  -- Desacelaração Linear
     body:setAngularDamping(DESACELERACAO_BOLA) -- Desacelaração Angular
     fixture:setRestitution(ELASTICIDADE_BOLA)  -- Elasticidade
-    fixture:setUserData(#bolas)                -- ID para checar encaçapamento
+    fixture:setUserData(num)                   -- ID para checar encaçapamento
 end
 
 function adicionarTodasAsBolas()
     -- Bola branca
     local x = tela.largura / 4
     local y = tela.altura / 2
-    adicionarBola(x, y, {1, 1, 1})
+    adicionarBola(x, y, {1, 1, 1}, 1)
 
     -- Demais bolas
     local baseX = x * 3
     local baseY = y
     local cores = {
+        {0.9, 0.9, 0}, 
+        {0.3, 0.2, 0},
+        {0.6, 0, 0.6}, 
+        {0.3, 0.2, 0},
         {0, 0, 0},
-        {1, 1, 0}, 
+        {0.9, 0.9, 0}, 
+        {0, 0.4, 0.2},
         {0, 0, 1}, 
         {1, 0, 0}, 
-        {0.6, 0, 0.6}, 
-        {1, 0.6, 0}, 
         {0, 0.4, 0.2},
-        {0.3, 0.2, 0}, 
+        {1, 0, 0},
+        {0, 0, 1}, 
+        {1, 0.6, 0},
+        {0.6, 0, 0.6}, 
+        {1, 0.6, 0},
     }
+    local numBolas = {9, 7, 12, 15, 8, 1, 6, 10, 3, 14, 11, 2, 13, 4, 5}
 
     for i=1,5 do
-        x = baseX + ((i-1) * (RAIO_BOLA * 2) + ESPACO_ENTRE_BOLAS)
-        y = baseY + ((i-1) * RAIO_BOLA + ESPACO_ENTRE_BOLAS)
+        x = baseX + ((i-1) * (RAIO_BOLA * 2))
+        y = baseY + ((i-1) * RAIO_BOLA)
         for j=1,i do
-            adicionarBola(x, y, cores[(#bolas % 8) + 1])
-            y = y - (RAIO_BOLA * 2) - ESPACO_ENTRE_BOLAS
+            adicionarBola(x, y, cores[#bolas], numBolas[#bolas]+1)
+            y = y - (RAIO_BOLA * 2)
         end
     end
 end
