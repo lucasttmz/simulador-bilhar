@@ -2,7 +2,6 @@ local DEBUG = false
 
 local RAIO_BURACO = 30
 local RAIO_BOLA = 15
-local ESPACO_ENTRE_BOLAS = 2
 local DESACELERACAO_BOLA = 0.4
 local ELASTICIDADE_BOLA = 0.8
 local DISTANCIA_MAXIMA = 400
@@ -11,7 +10,6 @@ local BOLA_BRANCA = 1
 
 local world
 local estadoAtual
-local reposicionarBolaBranca = false
 local bolas = {}
 local tela = {
     largura = 1280,
@@ -117,6 +115,8 @@ end
 function love.keypressed(key)
     if key == "escape" and estadoAtual == "distância" then
         estadoAtual = "rotação"
+    elseif key == "f1" then
+        DEBUG = not DEBUG
     end
 end
 
