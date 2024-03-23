@@ -1,5 +1,5 @@
-estadoAtual = "rotação" -- Estado da partida
-world = nil             -- Mundo que contém os objetos da colisão
+estadoAtual = "rotação"
+world = nil -- Mundo que contém os objetos da colisão
 tela = {
     largura = 1280,
     altura = 720,
@@ -23,8 +23,8 @@ function love.load()
     world:setCallbacks(bolas.checarEncapamento)
 
     -- Adiciona os objetos para responderem as colisões
-    mesa.adicionarBordas()
     bolas.adicionarTodasAsBolas()
+    mesa.adicionarBordas()
     mesa.adicionarBuracos()
 end
 
@@ -67,7 +67,7 @@ function love.update(dt)
         end
 
     elseif estadoAtual == "reposição" then
-        realocarBolaBranca()
+        bolas.realocarBolaBranca()
     end
 end
 

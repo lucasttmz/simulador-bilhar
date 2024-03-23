@@ -1,6 +1,7 @@
 local DEBUG = false
-local tela = require("mesa").tela
+
 local taco = require("tacada").taco
+local bolas = require("bolas")
 
 local mostrarMensagem = function(mensagem)
     -- Centraliza mensagem com sombra
@@ -19,11 +20,11 @@ local mostrarInformacoesDeDebug = function()
 
     love.graphics.print(
         "Taco: Ângulo Atual: " .. string.format("%.2f", taco.angulo) .. " rad " ..
-        "Distância Atual: " .. string.format("%.2f", taco.distanciaDoCentro - (taco.comprimento / 2) - RAIO_BOLA),
+        "Distância Atual: " .. string.format("%.2f", taco.distanciaDoCentro - (taco.comprimento / 2) - bolas.RAIO),
         5, 18
     )
 
-    for i, bola in pairs(bolas) do
+    for i, bola in pairs(bolas.bolas) do
         local va = string.format("%.2f", bola.body:getAngularVelocity())
         local vx, vy = bola.body:getLinearVelocity()
         vx = string.format("%.2f", vx)

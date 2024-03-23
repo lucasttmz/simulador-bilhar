@@ -66,7 +66,6 @@ local adicionarBola = function(x, y, rgb, num)
 end
 
 local adicionarTodasAsBolas = function()
-    local tela = require("mesa").tela
     -- Bola branca
     local x = tela.largura / 4
     local y = tela.altura / 2
@@ -124,7 +123,7 @@ local checarEncapamento = function(a, b)
     end
 end
 
-function realocarBolaBranca()
+local realocarBolaBranca = function()
     local mesa = require("mesa").mesa
     -- Limites da mesa
     local LIMITE_ESQUERDA = mesa.x + RAIO
@@ -167,4 +166,5 @@ return {
     adicionarTodasAsBolas = adicionarTodasAsBolas,
     checarEncapamento = checarEncapamento,
     bolasEmMovimento = bolasEmMovimento,
+    realocarBolaBranca = realocarBolaBranca,
 }

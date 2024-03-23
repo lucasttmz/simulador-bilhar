@@ -86,7 +86,6 @@ end
 
 
 return {
-    tela = tela,
     mesa = mesa,
     buracos = buracos,
     bordas = bordas,
