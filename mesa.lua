@@ -7,21 +7,21 @@ local mesa = {
     altura = tela.altura - 120,
 }    
 local buracos = {
-    {x = mesa.x , y = mesa.y - (RAIO_BURACO / 3)},
-    {x = mesa.largura / 2 + mesa.x, y = mesa.y - (RAIO_BURACO / 3)},
-    {x = mesa.largura + mesa.x, y = mesa.y - (RAIO_BURACO / 3)},
-    {x = mesa.x, y = mesa.y + mesa.altura + (RAIO_BURACO / 3)},
-    {x = mesa.largura / 2 + mesa.x, y = mesa.y + mesa.altura + (RAIO_BURACO / 3)},
-    {x = mesa.largura + mesa.x, y = mesa.y + mesa.altura + (RAIO_BURACO / 3)},
+    { x = mesa.x , y = mesa.y - (RAIO_BURACO / 3) },
+    { x = mesa.largura / 2 + mesa.x, y = mesa.y - (RAIO_BURACO / 3) },
+    { x = mesa.largura + mesa.x, y = mesa.y - (RAIO_BURACO / 3) },
+    { x = mesa.x, y = mesa.y + mesa.altura + (RAIO_BURACO / 3) },
+    { x = mesa.largura / 2 + mesa.x, y = mesa.y + mesa.altura + (RAIO_BURACO / 3) },
+    { x = mesa.largura + mesa.x, y = mesa.y + mesa.altura + (RAIO_BURACO / 3) },
 } 
 local bordas = {
-    {x1 = mesa.x, y1 = mesa.y, x2 = mesa.x + mesa.largura, y2 = mesa.y},
-    {x1 = mesa.x + mesa.largura, y1 = mesa.y, x2=mesa.x + mesa.largura, y2 = mesa.y + mesa.altura},
-    {x1 = mesa.x + mesa.largura, y1 = mesa.y + mesa.altura, x2 = mesa.x, y2 = mesa.y + mesa.altura},
-    {x1 = mesa.x, y1 = mesa.y + mesa.altura, x2 = mesa.x, y2 = mesa.y}
+    { x1 = mesa.x, y1 = mesa.y, x2 = mesa.x + mesa.largura, y2 = mesa.y },
+    { x1 = mesa.x + mesa.largura, y1 = mesa.y, x2=mesa.x + mesa.largura, y2 = mesa.y + mesa.altura },
+    { x1 = mesa.x + mesa.largura, y1 = mesa.y + mesa.altura, x2 = mesa.x, y2 = mesa.y + mesa.altura },
+    { x1 = mesa.x, y1 = mesa.y + mesa.altura, x2 = mesa.x, y2 = mesa.y }
 }
 
-local desenharMesa = function()
+local function desenharMesa()
     -- Madeira da borda
     love.graphics.setColor(64/255, 29/255, 8/255)
     love.graphics.rectangle(
@@ -64,7 +64,7 @@ local desenharMesa = function()
     end
 end
 
-local adicionarBordas = function()
+local function adicionarBordas()
     -- Adiciona a física das bordas
     for _, borda in pairs(bordas) do
         local body = love.physics.newBody(world, borda.x, borda.y, "static")
@@ -73,7 +73,7 @@ local adicionarBordas = function()
     end
 end
 
-local adicionarBuracos = function()
+local function adicionarBuracos()
     -- Adiciona a física dos buracos
     for _, buraco in pairs(buracos) do
         local body = love.physics.newBody(world, buraco.x, buraco.y, "static")

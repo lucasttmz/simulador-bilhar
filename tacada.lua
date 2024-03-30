@@ -10,7 +10,7 @@ local taco = {
     angulo = 0,
 }
 
-local desenharTaco = function()
+local function desenharTaco()
     -- Utiliza o ângulo do taco para rotacionar em volta de taco.x e taco.y, coordenadas
     -- atualizadas em rotacionarTaco(). 
     love.graphics.push()
@@ -32,7 +32,7 @@ local desenharTaco = function()
     love.graphics.pop()
 end
 
-local rotacionarTaco = function()
+local function rotacionarTaco()
     local bolaX, bolaY = bolas.bolas[bolas.BRANCA].body:getPosition()
 
     -- Angulo formado pelo lado oposto (y) e adjacente (x)
@@ -44,7 +44,7 @@ local rotacionarTaco = function()
     taco.y = bolaY + distanciaCentralizada * math.sin(taco.angulo)
 end
 
-local distanciarTaco = function()
+local function distanciarTaco()
     local bolaX, bolaY = bolas.bolas[bolas.BRANCA].body:getPosition()
     local mouseX, mouseY = love.mouse.getPosition()
 
@@ -61,7 +61,7 @@ local distanciarTaco = function()
     taco.distanciaDoCentro = distancia
 end
 
-local efetuarTacada = function()
+local function efetuarTacada()
     -- Utiliza a distância calculada subtraida do centro do taco (mouse sempre fica 
     -- centralizado no taco).
     local forca = (taco.distanciaDoCentro - (taco.comprimento / 2) - bolas.RAIO) * MODIFICADOR_VELOCIDADE
@@ -72,7 +72,7 @@ local efetuarTacada = function()
     )
 end
 
-local desenharTragetoria = function()
+local function desenharTragetoria()
     local mesa = require("mesa").mesa
 
     -- Utiliza o ângulo contrário ao taco para desenhar a tragetória da bola

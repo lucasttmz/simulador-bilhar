@@ -3,7 +3,7 @@ local DEBUG = false
 local taco = require("tacada").taco
 local bolas = require("bolas")
 
-local mostrarMensagem = function(mensagem)
+local function mostrarMensagem(mensagem)
     -- Centraliza mensagem com sombra
     love.graphics.setColor(0, 0, 0)
     love.graphics.printf(mensagem, 2, (tela.altura / 2)+2, tela.largura, "center")
@@ -11,7 +11,7 @@ local mostrarMensagem = function(mensagem)
     love.graphics.printf(mensagem, 0, tela.altura / 2, tela.largura, "center")
 end
 
-local mostrarInformacoesDeDebug = function()
+local function mostrarInformacoesDeDebug()
     love.graphics.setColor(1, 1, 1, 1)
     love.graphics.print(
         "Estado Atual: " .. estadoAtual .. " - FPS: " .. tostring(love.timer.getFPS()), 
@@ -31,7 +31,7 @@ local mostrarInformacoesDeDebug = function()
         vy = string.format("%.2f", vy)
         love.graphics.setColor(bola.cor)
         love.graphics.print(
-            "Bola " .. i ..
+            "Bola " .. (i~=1 and i-1 or "Branca") ..
             ": Velocidade X: ".. vx .. 
             " Velocidade Y: ".. vy ..
             " Velocidade Angular: " .. va, 

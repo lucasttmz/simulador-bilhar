@@ -5,7 +5,7 @@ local RAIO = 15
 
 local bolas = {}
 
-local desenharBola = function(bola)
+local function desenharBola(bola)
     local x, y = bola.body:getPosition()
     local numBola = bola.fixture:getUserData()
     local raio = bola.shape:getRadius()
@@ -44,7 +44,7 @@ local desenharBola = function(bola)
     end
 end
 
-local adicionarBola = function(x, y, rgb, num)
+local function adicionarBola(x, y, rgb, num)
     -- Adiciona a bola e sua física
     local body = love.physics.newBody(world, x, y, "dynamic")
     local shape = love.physics.newCircleShape(RAIO)
@@ -65,7 +65,7 @@ local adicionarBola = function(x, y, rgb, num)
     fixture:setUserData(num)                   -- ID para checar encaçapamento
 end
 
-local adicionarTodasAsBolas = function()
+local function adicionarTodasAsBolas()
     -- Bola branca
     local x = tela.largura / 4
     local y = tela.altura / 2
@@ -103,7 +103,7 @@ local adicionarTodasAsBolas = function()
     end
 end
 
-local checarEncapamento = function(a, b)
+local function checarEncapamento(a, b)
     local bola = a:getUserData()
     local colidiuCom = b:getUserData()
 
@@ -123,7 +123,7 @@ local checarEncapamento = function(a, b)
     end
 end
 
-local realocarBolaBranca = function()
+local function realocarBolaBranca()
     local mesa = require("mesa").mesa
     -- Limites da mesa
     local LIMITE_ESQUERDA = mesa.x + RAIO
@@ -146,7 +146,7 @@ local realocarBolaBranca = function()
     bolas[BRANCA].body:setPosition(mouseX, mouseY)
 end
 
-local bolasEmMovimento = function()
+local function bolasEmMovimento()
     for _, bola in pairs(bolas) do
         local velocidadeX, velocidadeY = bola.body:getLinearVelocity()
         -- Se uma das bolas estiver em movimento, não checa as demais
